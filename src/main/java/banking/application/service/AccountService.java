@@ -1,6 +1,6 @@
 package banking.application.service;
 
-import banking.application.AccountProperties;
+import banking.application.config.AccountProperties;
 import banking.application.generator.AccountIdGenerator;
 import banking.application.model.Account;
 import banking.application.storage.AccountsStorage;

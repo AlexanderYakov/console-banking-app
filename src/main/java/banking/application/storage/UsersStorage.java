@@ -1,6 +1,5 @@
 package banking.application.storage;
 
-import banking.application.UserStorage;
 import banking.application.model.User;
 import org.springframework.stereotype.Component;
 

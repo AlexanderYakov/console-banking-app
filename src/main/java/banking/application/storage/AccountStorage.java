@@ -1,4 +1,4 @@
-package banking.application;
+package banking.application.storage;
 
 import banking.application.model.Account;
 

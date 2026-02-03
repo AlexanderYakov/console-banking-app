@@ -1,13 +1,14 @@
 package banking.application.storage;
 
-import banking.application.AccountStorage;
 import banking.application.model.Account;
+import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Component
 public class AccountsStorage implements AccountStorage {
     HashMap<Integer, Account> accounts = new HashMap<>();
 

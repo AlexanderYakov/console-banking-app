@@ -1,14 +1,16 @@
 package banking.application.service;
 
-import banking.application.AccountProperties;
+import banking.application.config.AccountProperties;
 import banking.application.model.Account;
 import banking.application.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 
+@Service
 public class UserAccountService {
     private final UserService userService;
     private final AccountService accountService;
