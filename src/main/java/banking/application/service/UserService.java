@@ -1,57 +1,104 @@
 package banking.application.service;
 
-import banking.application.generator.UserIdGenerator;
+import banking.application.model.Account;
 import banking.application.model.User;
-import banking.application.storage.UsersStorage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 public class UserService {
 
-    private final UsersStorage usersStorage;
-    private final UserIdGenerator idGenerator;
+    private final AccountService accountService;
+    private int userId = 0;
+    private final HashMap<Integer, User> users = new HashMap<>();
+    private final HashMap<String, User> usersByLogin = new HashMap<>();
 
     @Autowired
-    public UserService(UsersStorage usersStorage, UserIdGenerator idGenerator) {
-        this.usersStorage = usersStorage;
-        this.idGenerator = idGenerator;
+    public UserService(AccountService accountService) {
+        this.accountService = accountService;
     }
 
     public User createUser(String login) {
-        if (usersStorage.existsByLogin(login)) {
+        if (findUserByLogin(login).isPresent()) {
             throw new IllegalArgumentException("User with login " + login
                     + " already exists");
         }
-        int userId = idGenerator.getNextId();
+        ++userId;
         User user = new User(userId, login);
-        usersStorage.save(user);
+        users.put(user.getId(), user);
+        usersByLogin.put(user.getLogin(), user);
         return user;
     }
 
     public User getUserById(int id) {
-        return usersStorage.findById(id).orElseThrow(
+        return Optional.ofNullable(users.get(id)).orElseThrow(
                 () -> new IllegalArgumentException("User with ID " + id
                         + " not found")
         );
     }
 
     public List<User> showAllUsers() {
-        return usersStorage.showAll();
+        return new ArrayList<>(users.values());
     }
 
     public boolean userExists(int id) {
-       return usersStorage.findById(id).isPresent();
+        return Optional.ofNullable(users.get(id)).isPresent();
     }
 
     public boolean isLoginAvailable(String login) {
-        return usersStorage.existsByLogin(login);
+        return usersByLogin.get(login) != null;
     }
 
     public Optional<User> findUserByLogin(String login) {
-        return usersStorage.findByLogin(login);
+        return Optional.ofNullable(usersByLogin.get(login));
+    }
+
+    public String getUserDisplayInfo(int userId) {
+        User user = getUserById(userId);
+        List<Account> accounts = accountService.getUserAccounts(userId);
+        return formatUserWithAccounts(user, accounts);
+    }
+
+    public String formatUserWithAccounts(User user, List<Account> accounts) {
+        StringBuilder accountsStr = new StringBuilder("[");
+        for (int i = 0; i < accounts.size(); i++) {
+            Account acc = accounts.get(i);
+            accountsStr.append(formatAccount(acc));
+            if (i < accounts.size() - 1) {
+                accountsStr.append(", ");
+            }
+        }
+        accountsStr.append("]");
+
+        return String.format(
+                "User{id=%d, login='%s', accountList=%s}",
+                user.getId(),
+                user.getLogin(),
+                accountsStr.toString()
+        );
+    }
+
+    private String formatAccount(Account account) {
+        String amountStr;
+        BigDecimal amount = account.getMoneyAmount();
+
+        if (amount.scale() <= 0 || amount.stripTrailingZeros().scale() <= 0) {
+            amountStr = String.valueOf(amount.intValue());
+        } else {
+            amountStr = String.format("%.2f", amount);
+        }
+
+        return String.format(
+                "Account{id=%d, userId=%d, moneyAmount=%s}",
+                account.getId(),
+                account.getUserId(),
+                amountStr
+        );
     }
 }

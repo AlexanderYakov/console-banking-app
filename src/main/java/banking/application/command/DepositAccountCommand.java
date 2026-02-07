@@ -1,7 +1,7 @@
 package banking.application.command;
 
 import banking.application.operation.ConsoleOperationType;
-import banking.application.service.UserAccountService;
+import banking.application.service.AccountService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -9,16 +9,19 @@ import java.math.BigDecimal;
 import java.util.Scanner;
 
 @Component
-public class DepositCommand implements OperationCommand {
-    private final UserAccountService userAccountService;
+public class DepositAccountCommand implements OperationCommand {
+    private final AccountService accountService;
+    private final Scanner scanner;
 
     @Autowired
-    public DepositCommand(UserAccountService userAccountService) {
-        this.userAccountService = userAccountService;
+    public DepositAccountCommand(AccountService accountService,
+                                 Scanner scanner) {
+        this.accountService = accountService;
+        this.scanner = scanner;
     }
 
     @Override
-    public void execute(Scanner scanner) {
+    public void execute() {
         try {
             System.out.println("Enter account ID:");
             String accountIdInput = scanner.nextLine().trim();
@@ -27,12 +30,12 @@ public class DepositCommand implements OperationCommand {
             try {
                 accountId = Integer.parseInt(accountIdInput);
             } catch (NumberFormatException e) {
-                System.out.println("Error: Account ID must be a number");
+                System.out.println("Exception: Account ID must be a number");
                 return;
             }
 
-            if (!userAccountService.accountExists(accountId)) {
-                System.out.println("Error: Account with ID " + accountId + " not found");
+            if (!accountService.accountExists(accountId)) {
+                System.out.println("Exception: Account with ID " + accountId + " not found");
                 return;
             }
 
@@ -43,21 +46,23 @@ public class DepositCommand implements OperationCommand {
             try {
                 amount = new BigDecimal(amountInput);
             } catch (NumberFormatException e) {
-                System.out.println("Error: Amount must be a valid number");
+                System.out.println("Exception: Amount must be a valid number");
                 return;
             }
 
             if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-                System.out.println("Error: Deposit amount must be positive");
+                System.out.println("Exception: Deposit amount must be positive");
                 return;
             }
-
-            String result = userAccountService.deposit(accountId, amount);
+            accountService.deposit(accountId, amount);
+            String result = String.format(
+                    "Amount %.2f deposited to account ID: %d",
+                    amount, accountId);
 
             System.out.println(result);
 
         } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
+            System.out.println("Exception: " + e.getMessage());
         }
     }
 

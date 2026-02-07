@@ -8,24 +8,10 @@ public class Account {
     private BigDecimal moneyAmount;
 
     public Account(int id, int userId, BigDecimal initialBalance) {
-        if (id <= 0) {
-            throw new IllegalArgumentException("Account ID must be positive");
-        }
-        if (userId <= 0) {
-            throw new IllegalArgumentException("User ID must be positive");
-        }
-        if (initialBalance == null) {
-            throw new IllegalArgumentException("Initial balance cannot be null");
-        }
-        if (initialBalance.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Initial balance cannot be negative");
-        }
-
-        this.id = id;
-        this.userId = userId;
-        this.moneyAmount = initialBalance;
+        this.id = validatePositive(id, "Account ID");
+        this.userId = validatePositive(userId, "User ID");
+        moneyAmount = validateBalance(initialBalance);
     }
-
 
     public Account(int id, int userId, double initialBalance) {
         this(id, userId, BigDecimal.valueOf(initialBalance));
@@ -48,6 +34,23 @@ public class Account {
 
     public BigDecimal getMoneyAmount() {
         return moneyAmount;
+    }
+
+    private static int validatePositive(int value, String fieldName) {
+        if (value <= 0) {
+            throw new IllegalArgumentException(fieldName + " must be positive");
+        }
+        return value;
+    }
+
+    private static BigDecimal validateBalance(BigDecimal balance) {
+        if (balance == null) {
+            throw new IllegalArgumentException("Balance cannot be null");
+        }
+        if (balance.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Balance cannot be negative");
+        }
+        return balance;
     }
 
     @Override

@@ -15,10 +15,11 @@ public class OperationsConsoleListener implements Runnable {
     private final Scanner scanner;
 
     @Autowired
-    public OperationsConsoleListener(List<OperationCommand> commands) {
+    public OperationsConsoleListener(List<OperationCommand> commands,
+                                     Scanner scanner) {
         this.commands = commands;
         this.commandMap = new HashMap<>();
-        this.scanner = new Scanner(System.in);
+        this.scanner = scanner;
     }
 
     @PostConstruct
@@ -45,18 +46,18 @@ public class OperationsConsoleListener implements Runnable {
                 try {
                     operationType = ConsoleOperationType.valueOf(input);
                 } catch (IllegalArgumentException e) {
-                    System.out.println("Error: Unknown operation type: " + input);
+                    System.out.println("Exception: Unknown operation type: " + input);
                     System.out.println("Please enter a valid operation type from the list above.");
                     continue;
                 }
 
                 OperationCommand command = commandMap.get(operationType);
                 if (command == null) {
-                    System.out.println("Error: No command handler for operation: " + operationType);
+                    System.out.println("Exception: No command handler for operation: " + operationType);
                     continue;
                 }
 
-                command.execute(scanner);
+                command.execute();
 
             } catch (Exception e) {
                 System.out.println("Unexpected error in main loop: " + e.getMessage());

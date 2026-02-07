@@ -1,43 +1,35 @@
 package banking.application.service;
 
 import banking.application.config.AccountProperties;
-import banking.application.generator.AccountIdGenerator;
 import banking.application.model.Account;
-import banking.application.storage.AccountsStorage;
-import banking.application.storage.UsersStorage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class AccountService {
-    private final AccountsStorage accountsStorage;
-    private final UsersStorage usersStorage;
-    private final AccountIdGenerator accountIdGenerator;
     private final AccountProperties accountProperties;
+    private int accountId = 0;
+    HashMap<Integer, Account> accounts = new HashMap<>();
 
     @Autowired
-    public AccountService(AccountsStorage accountsStorage,
-                          UsersStorage usersStorage,
-                          AccountIdGenerator accountIdGenerator,
-                          AccountProperties accountProperties) {
-        this.accountsStorage = accountsStorage;
-        this.usersStorage = usersStorage;
-        this.accountIdGenerator = accountIdGenerator;
+    public AccountService(AccountProperties accountProperties) {
         this.accountProperties = accountProperties;
     }
 
     public Account createAccount(int userId) {
-        if (!usersStorage.existsById(userId)) {
-            throw new IllegalArgumentException("User with id " + userId + " not found");
-        }
         Account account = new Account(
-                accountIdGenerator.getNextId(),
+                ++accountId,
                 userId,
                 accountProperties.getDefaultAmount()
         );
-        return accountsStorage.save(account);
+        accounts.put(account.getId(), account);
+        return account;
     }
 
     public void deposit(int accountId, BigDecimal amount) {
@@ -46,7 +38,7 @@ public class AccountService {
         }
         Account account = getAccountById(accountId);
         account.deposit(amount);
-        accountsStorage.save(account);
+        accounts.put(account.getId(), account);
     }
 
     public void withdraw(int accountId, BigDecimal amount) {
@@ -58,12 +50,12 @@ public class AccountService {
 
         if (account.getMoneyAmount().compareTo(amount) < 0) {
             throw new IllegalArgumentException("Not enough money in account"
-            + accountId + ". Available: " + account.getMoneyAmount()
-            + ", requested: " + amount);
+                    + accountId + ". Available: " + account.getMoneyAmount()
+                    + ", requested: " + amount);
         }
 
         account.withdraw(amount);
-        accountsStorage.save(account);
+        accounts.put(account.getId(), account);
     }
 
     public void transfer(int fromAccountId, int toAccountId, BigDecimal amount) {
@@ -75,18 +67,18 @@ public class AccountService {
             throw new IllegalArgumentException("Cannot transfer to the same account");
         }
 
-        if (!accountsStorage.existsById(fromAccountId)) {
+        if (!accountExists(fromAccountId)) {
             throw new IllegalArgumentException("Account with id: " + fromAccountId
-            + " doesn't exists");
+                    + " doesn't exists");
         }
 
-        if (!accountsStorage.existsById(toAccountId)) {
+        if (!accountExists(toAccountId)) {
             throw new IllegalArgumentException("Account with id: " + toAccountId
                     + " doesn't exists");
         }
 
-        Account fromAccount = accountsStorage.getAccountById(fromAccountId);
-        Account toAccount = accountsStorage.getAccountById(toAccountId);
+        Account fromAccount = getAccountById(fromAccountId);
+        Account toAccount = getAccountById(toAccountId);
 
         BigDecimal commission = BigDecimal.ZERO;
         if (fromAccount.getUserId() != toAccount.getUserId()) {
@@ -96,27 +88,34 @@ public class AccountService {
         BigDecimal totalWithdraw = amount.add(commission.multiply(amount));
         if (fromAccount.getMoneyAmount().compareTo(totalWithdraw) < 0) {
             throw new IllegalArgumentException("Not enough money for transfer. Available: "
-            + fromAccount.getMoneyAmount() + ", required: " + totalWithdraw
-            + " (amount: " + amount + ", commission: " + commission + ")");
+                    + fromAccount.getMoneyAmount() + ", required: " + totalWithdraw
+                    + " (amount: " + amount + ", commission: " + commission + ")");
         }
 
         fromAccount.withdraw(totalWithdraw);
         toAccount.deposit(amount);
 
-        accountsStorage.save(fromAccount);
-        accountsStorage.save(toAccount);
-        
+        accounts.put(fromAccount.getId(), fromAccount);
+        accounts.put(toAccount.getId(), toAccount);
+
+        String commissionInfo = String.format(" (commission: %.2f applied)", commission);
+        String result = String.format(
+                "Amount %.2f transferred from account ID %d to account ID %d.%s",
+                amount, fromAccountId, toAccountId, commissionInfo
+        );
+        System.out.println(result);
+
     }
 
-    public void closeAccount(int accountId) {
-        if (!accountsStorage.existsById(accountId)) {
+    public String closeAccount(int accountId) {
+        if (!accountExists(accountId)) {
             throw new IllegalArgumentException("Not found account with id: " + accountId);
         }
 
-        Account accountToClose = accountsStorage.getAccountById(accountId);
+        Account accountToClose = getAccountById(accountId);
         int userId = accountToClose.getUserId();
 
-        var userAccounts = accountsStorage.findByUserId(userId);
+        var userAccounts = getUserAccounts(userId);
 
         if (userAccounts.size() <= 1) {
             throw new IllegalArgumentException("Cannot close the only account of user. User ID: "
@@ -126,28 +125,43 @@ public class AccountService {
         Account firstOtherAccount = userAccounts.stream()
                 .filter(acc -> acc.getId() != accountId)
                 .findFirst()
-                .orElseThrow( () ->
+                .orElseThrow(() ->
                         new IllegalArgumentException("No other accounts found")
                 );
 
         BigDecimal remainingBalance = accountToClose.getMoneyAmount();
         if (remainingBalance.compareTo(BigDecimal.ZERO) > 0) {
             firstOtherAccount.deposit(remainingBalance);
-            accountsStorage.save(firstOtherAccount);
+            accounts.put(firstOtherAccount.getId(), firstOtherAccount);
         }
 
-        accountsStorage.delete(accountId);
+        accounts.remove(accountId);
+        return String.format("Account with ID %d has been closed.", accountId);
     }
 
     public Account getAccountById(int accountId) {
-        return accountsStorage.findById(accountId)
+        return Optional.ofNullable(accounts.get(accountId))
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Account with id " + accountId + " not found"
                 ));
     }
 
-    public java.util.List<Account> getUserAccounts(int userId) {
-        return accountsStorage.findByUserId(userId);
+    public List<Account> getUserAccounts(int userId) {
+        return accounts.values().stream()
+                .filter(account -> account.getUserId() == userId)
+                .collect(Collectors.toList());
     }
 
+    public boolean accountExists(int accountId) {
+        try {
+            getAccountById(accountId);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public boolean bothAccountsExist(int accountId1, int accountId2) {
+        return accountExists(accountId1) && accountExists(accountId2);
+    }
 }
