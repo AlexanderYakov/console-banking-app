@@ -30,7 +30,9 @@ public class UserService {
                     + " already exists");
         }
         ++userId;
-        User user = new User(userId, login);
+        User user = new User(userId, login, new ArrayList<>());
+        Account account = accountService.createAccount(user.getId());
+        user.getAccountList().add(account);
         users.put(user.getId(), user);
         usersByLogin.put(user.getLogin(), user);
         return user;
@@ -45,14 +47,6 @@ public class UserService {
 
     public List<User> showAllUsers() {
         return new ArrayList<>(users.values());
-    }
-
-    public boolean userExists(int id) {
-        return Optional.ofNullable(users.get(id)).isPresent();
-    }
-
-    public boolean isLoginAvailable(String login) {
-        return usersByLogin.get(login) != null;
     }
 
     public Optional<User> findUserByLogin(String login) {
@@ -77,7 +71,7 @@ public class UserService {
         accountsStr.append("]");
 
         return String.format(
-                "User{id=%d, login='%s', accountList=%s}",
+                "User{id=%d, login='%s', accounts=%s}",
                 user.getId(),
                 user.getLogin(),
                 accountsStr.toString()

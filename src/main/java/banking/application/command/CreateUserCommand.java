@@ -2,7 +2,6 @@ package banking.application.command;
 
 import banking.application.model.User;
 import banking.application.operation.ConsoleOperationType;
-import banking.application.service.AccountService;
 import banking.application.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -12,15 +11,12 @@ import java.util.Scanner;
 @Component
 public class CreateUserCommand implements OperationCommand {
     private final UserService userService;
-    private final AccountService accountService;
     private final Scanner scanner;
 
     @Autowired
     public CreateUserCommand(Scanner scanner,
-                             UserService userService,
-                             AccountService accountService) {
+                             UserService userService) {
         this.userService = userService;
-        this.accountService = accountService;
         this.scanner = scanner;
     }
 
@@ -35,7 +31,6 @@ public class CreateUserCommand implements OperationCommand {
                 return;
             }
             User user = userService.createUser(login);
-            accountService.createAccount(user.getId());
             String userInfo = userService.getUserDisplayInfo(user.getId());
             System.out.println("User created: " + userInfo);
         } catch (Exception e) {

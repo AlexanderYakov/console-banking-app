@@ -1,6 +1,5 @@
 package banking.application.model;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class User {
@@ -9,9 +8,12 @@ public class User {
 
     private final String login;
 
-    public User(int id, String login) {
+    private final List<Account> accountList;
+
+    public User(int id, String login, List<Account> accountList) {
         this.id = id;
         this.login = login;
+        this.accountList = accountList;
     }
 
     public int getId() {
@@ -22,6 +24,9 @@ public class User {
         return login;
     }
 
+    public List<Account> getAccountList() {
+        return accountList;
+    }
 
     @Override
     public String toString() {

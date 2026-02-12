@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 public class AccountService {
     private final AccountProperties accountProperties;
     private int accountId = 0;
-    HashMap<Integer, Account> accounts = new HashMap<>();
+    private final HashMap<Integer, Account> accounts = new HashMap<>();
 
     @Autowired
     public AccountService(AccountProperties accountProperties) {
@@ -42,6 +42,7 @@ public class AccountService {
     }
 
     public void withdraw(int accountId, BigDecimal amount) {
+
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Withdrawal amount must be positive");
         }
@@ -65,16 +66,6 @@ public class AccountService {
 
         if (fromAccountId == toAccountId) {
             throw new IllegalArgumentException("Cannot transfer to the same account");
-        }
-
-        if (!accountExists(fromAccountId)) {
-            throw new IllegalArgumentException("Account with id: " + fromAccountId
-                    + " doesn't exists");
-        }
-
-        if (!accountExists(toAccountId)) {
-            throw new IllegalArgumentException("Account with id: " + toAccountId
-                    + " doesn't exists");
         }
 
         Account fromAccount = getAccountById(fromAccountId);
@@ -107,10 +98,7 @@ public class AccountService {
 
     }
 
-    public String closeAccount(int accountId) {
-        if (!accountExists(accountId)) {
-            throw new IllegalArgumentException("Not found account with id: " + accountId);
-        }
+    public Account closeAccount(int accountId) {
 
         Account accountToClose = getAccountById(accountId);
         int userId = accountToClose.getUserId();
@@ -136,7 +124,7 @@ public class AccountService {
         }
 
         accounts.remove(accountId);
-        return String.format("Account with ID %d has been closed.", accountId);
+        return accountToClose;
     }
 
     public Account getAccountById(int accountId) {
@@ -150,18 +138,5 @@ public class AccountService {
         return accounts.values().stream()
                 .filter(account -> account.getUserId() == userId)
                 .collect(Collectors.toList());
-    }
-
-    public boolean accountExists(int accountId) {
-        try {
-            getAccountById(accountId);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    public boolean bothAccountsExist(int accountId1, int accountId2) {
-        return accountExists(accountId1) && accountExists(accountId2);
     }
 }

@@ -8,6 +8,7 @@ import banking.application.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.InputMismatchException;
 import java.util.Scanner;
 
 @Component
@@ -29,23 +30,13 @@ public class CreateAccountCommand implements OperationCommand {
     public void execute() {
         try {
             System.out.println("Enter the user id for which to create an account:");
-            String input = scanner.nextLine().trim();
 
-            int userId;
-            try {
-                userId = Integer.parseInt(input);
-            } catch (NumberFormatException e) {
-                System.out.println("Exception: User ID must be a number");
-                return;
-            }
-
-            if (!userService.userExists(userId)) {
-                System.out.println("Exception: User with ID " + userId + " not found");
-                return;
-            }
+            int userId = scanner.nextInt();
+            scanner.nextLine();
 
             User user = userService.getUserById(userId);
             Account account = accountService.createAccount(userId);
+            user.getAccountList().add(account);
             String result = String.format(
                     "New account created with ID: %d for user: %s",
                     account.getId(),
@@ -54,7 +45,11 @@ public class CreateAccountCommand implements OperationCommand {
 
             System.out.println(result);
 
-        } catch (Exception e) {
+        } catch (InputMismatchException inputMismatchException) {
+            System.out.println("Exception: User ID must be a number");
+            scanner.nextLine();
+        }
+        catch (Exception e) {
             System.out.println("Exception: " + e.getMessage());
         }
     }

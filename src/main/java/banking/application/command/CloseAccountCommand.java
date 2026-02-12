@@ -1,20 +1,27 @@
 package banking.application.command;
 
+import banking.application.model.Account;
+import banking.application.model.User;
 import banking.application.operation.ConsoleOperationType;
 import banking.application.service.AccountService;
+import banking.application.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.InputMismatchException;
 import java.util.Scanner;
 
 @Component
 public class CloseAccountCommand implements OperationCommand {
+    private final UserService userService;
     private final AccountService accountService;
     private final Scanner scanner;
 
     @Autowired
-    public CloseAccountCommand(AccountService accountService,
+    public CloseAccountCommand(UserService userService,
+                               AccountService accountService,
                                Scanner scanner) {
+        this.userService = userService;
         this.accountService = accountService;
         this.scanner = scanner;
     }
@@ -23,25 +30,19 @@ public class CloseAccountCommand implements OperationCommand {
     public void execute() {
         try {
             System.out.println("Enter account ID to close:");
-            String accountIdInput = scanner.nextLine().trim();
 
-            int accountId;
-            try {
-                accountId = Integer.parseInt(accountIdInput);
-            } catch (NumberFormatException e) {
-                System.out.println("Exception: Account ID must be a number");
-                return;
-            }
+            int accountId = scanner.nextInt();
+            scanner.nextLine();
 
-            if (!accountService.accountExists(accountId)) {
-                System.out.println("Exception: Account with ID " + accountId + " not found");
-                return;
-            }
+            Account account = accountService.closeAccount(accountId);
+            User user = userService.getUserById(account.getUserId());
+            user.getAccountList().removeIf(acc -> acc.getId() == accountId);
 
-            String result = accountService.closeAccount(accountId);
+            System.out.printf("Account with ID %d has been closed.%n", accountId);
 
-            System.out.println(result);
-
+        } catch (InputMismatchException inputMismatchException) {
+            System.out.println("Exception: Account ID must be a number");
+            scanner.nextLine();
         } catch (Exception e) {
             System.out.println("Exception: " + e.getMessage());
         }
